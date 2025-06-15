@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF to JPG Converter (GDRFA Spec)</title>
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- PDF.js library from Mozilla -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js" xintegrity="sha512-B20grr6vJ_4/tAKYgH/4iU2eS0gwB/i4lgiX5zR/dms3CP_D8L3iFj7i24M8qg4vLqwS59f/R82A7fXdVHl_A==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <!-- JSZip for creating ZIP files -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" xintegrity="sha512-UaZmKHeZdr+4aH3Okg1Qz8DE9G3EVTJ3LdDC5F5NiXxEVlP+eKsvM+hxA+IFgSjz8vC5K7MLyvN5v_LdpKqPAg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #f0f4f8 0%, #d9e2ec 100%);
+            color: #1f2937; /* Tailwind gray-800 */
+        }
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.6);
+            backdrop-filter: blur(15px) saturate(150%);
+            -webkit-backdrop-filter: blur(15px) saturate(150%);
+            border-radius: 1rem;
+            border: 1px solid rgba(209, 213, 219, 0.3);
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.1);
+        }
+        .btn {
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px 0 rgba(0, 0, 0, 0.1);
+        }
+        .btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px 0 rgba(0, 0, 0, 0.15);
+        }
+        .btn-primary { background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); }
+        .btn-secondary { background: linear-gradient(135deg, #10b981 0%, #059669 100%); }
+        .btn-zip { background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); }
+        .btn-clear { background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%); }
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border-left-color: #3b82f6;
+            animation: spin 1s ease infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .output-card {
+            border: 1px solid #e5e7eb; /* gray-200 */
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        .output-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+
+        /* Unified Footer */
+        .unified-footer {
+            margin-top: 2rem;
+            padding-top: 1rem;
+            border-top: 1px solid rgba(209, 213, 219, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.9rem;
+            color: #6b7280; /* Tailwind gray-500 */
+        }
+        .github-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            font-weight: 700;
+            color: #4b5563; /* Tailwind gray-600 */
+            text-decoration: none;
+            transition: color 0.3s ease;
+            animation: glow 3.5s ease-in-out infinite;
+        }
+        .github-link:hover {
+            color: #3b82f6; /* Tailwind blue-500 */
+        }
+        .github-link svg {
+            width: 20px;
+            height: 20px;
+            fill: currentColor;
+        }
+        @keyframes glow {
+            0%, 100% {
+                text-shadow: 0 0 4px rgba(59, 130, 246, 0.5);
+                color: #4b5563;
+            }
+            50% {
+                text-shadow: 0 0 12px rgba(96, 165, 250, 0.9);
+                color: #3b82f6;
+            }
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-center p-4 sm:p-6 lg:p-8">
+
+    <div class="w-full max-w-2xl p-6 sm:p-8 glass-effect">
+        <div class="text-center mb-8">
+            <h1 class="text-3xl sm:text-4xl font-bold text-gray-800">PDF to JPG Converter</h1>
+            <p class="text-gray-600 mt-2">Convert PDF pages to high-quality JPGs compliant with GDRFA specifications.</p>
+        </div>
+
+        <div class="bg-white/70 rounded-lg p-6 space-y-6">
+            <!-- File Input Section -->
+            <div>
+                <label for="pdfFile" class="block text-sm font-medium text-gray-700 mb-2">1. Choose one or more PDF files:</label>
+                <div class="flex items-center justify-center w-full">
+                    <label for="pdfFile" class="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100">
+                        <div class="flex flex-col items-center justify-center pt-5 pb-6">
+                            <svg class="w-8 h-8 mb-4 text-gray-500" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 16"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 13h3a3 3 0 0 0 0-6h-.025A5.56 5.56 0 0 0 16 6.5 5.5 5.5 0 0 0 5.207 5.021C5.137 5.017 5.071 5 5 5a4 4 0 0 0 0 8h2.167M10 15V6m0 0L8 8m2-2 2 2"/></svg>
+                            <p class="mb-2 text-sm text-gray-500"><span class="font-semibold">Click to upload</span> or drag and drop</p>
+                            <p class="text-xs text-gray-500">PDF files only</p>
+                        </div>
+                        <input id="pdfFile" type="file" class="hidden" accept="application/pdf" multiple>
+                    </label>
+                </div>
+                <p id="fileName" class="text-center text-sm text-gray-500 mt-2 h-5"></p>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <button id="convertButton" class="btn btn-primary w-full text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                    <svg class="w-5 h-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0011.667 0l3.181-3.183m-4.991-2.696V7.721c0-2.616-2.12-4.736-4.736-4.736H7.721C5.105 3 3 5.12 3 7.721v4.922" /></svg>
+                    Convert to JPG
+                </button>
+                <button id="clearButton" class="btn btn-clear w-full text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                    <svg class="w-5 h-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg>
+                    Clear
+                </button>
+                <button id="downloadAllButton" class="btn btn-zip sm:col-span-2 w-full text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center hidden">
+                    <svg class="w-5 h-5 mr-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path d="M4 2a1 1 0 00-1 1v14a1 1 0 001 1h12a1 1 0 001-1V9.414A1 1 0 0016.586 9H13a1 1 0 01-1-1V4.414A1 1 0 0011.586 4H5a1 1 0 00-1-1zm6 2v2h3.586L10 7.586V4zM4 16v-6h8v6H4z"/></svg>
+                    Download All as ZIP
+                </button>
+            </div>
+        </div>
+        
+        <!-- Status/Message Area -->
+        <div id="status" class="text-center mt-6 h-10 flex items-center justify-center"></div>
+
+        <!-- Developer Credit Footer -->
+        <footer class="unified-footer">
+            <p>Developed by</p>
+            <a href="https://github.com/mo-omen" target="_blank" rel="noopener noreferrer" class="github-link">
+                <!-- GitHub Logo SVG -->
+                <svg viewBox="0 0 16 16" version="1.1" aria-hidden="true"><path fill-rule="evenodd" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path></svg>
+                <span>Momen Elhag</span>
+            </a>
+        </footer>
+    </div>
+
+    <!-- Output Section -->
+    <div id="output" class="w-full max-w-6xl mt-8 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+        <!-- Converted images will be appended here -->
+    </div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const pdfFileInput = document.getElementById('pdfFile');
+            const fileNameDisplay = document.getElementById('fileName');
+            const convertButton = document.getElementById('convertButton');
+            const clearButton = document.getElementById('clearButton');
+            const downloadAllButton = document.getElementById('downloadAllButton');
+            const statusDiv = document.getElementById('status');
+            const outputDiv = document.getElementById('output');
+            
+            pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js`;
+            let allGeneratedFiles = [];
+
+            // Event Listeners
+            pdfFileInput.addEventListener('change', handleFileSelection);
+            convertButton.addEventListener('click', handleConversion);
+            clearButton.addEventListener('click', resetUI);
+            downloadAllButton.addEventListener('click', downloadAllFilesAsZip);
+            
+            function handleFileSelection() {
+                const numFiles = pdfFileInput.files.length;
+                if (numFiles > 0) {
+                    fileNameDisplay.textContent = `${numFiles} file(s) selected`;
+                    convertButton.disabled = false;
+                    clearButton.disabled = false;
+                } else {
+                    resetUI();
+                }
+            }
+            
+            async function handleConversion() {
+                const files = pdfFileInput.files;
+                if (files.length === 0) {
+                    showStatus('Please select one or more PDF files first.', 'error');
+                    return;
+                }
+                
+                outputDiv.innerHTML = '';
+                allGeneratedFiles = [];
+                downloadAllButton.classList.add('hidden');
+                convertButton.disabled = true;
+                clearButton.disabled = true;
+
+                for (let i = 0; i < files.length; i++) {
+                    const file = files[i];
+                    const originalFileName = file.name.replace(/\.pdf$/i, '');
+                    showLoadingSpinner(`Processing file ${i + 1} of ${files.length}: ${file.name}`);
+
+                    const fileOutputHeader = document.createElement('h2');
+                    fileOutputHeader.className = 'col-span-full text-xl font-bold text-gray-700 mt-6 mb-1 border-b pb-2';
+                    fileOutputHeader.textContent = `Results for: ${file.name}`;
+                    outputDiv.appendChild(fileOutputHeader);
+
+                    try {
+                        const pdfData = await readFileAsArrayBuffer(file);
+                        const pdf = await pdfjsLib.getDocument({ data: pdfData }).promise;
+                        const numPages = pdf.numPages;
+                        
+                        for (let pageNum = 1; pageNum <= numPages; pageNum++) {
+                            showLoadingSpinner(`Converting page ${pageNum} of ${numPages} for ${file.name}...`);
+                            const page = await pdf.getPage(pageNum);
+                            const canvas = await renderPageToCanvas(page);
+                            const { jpgBlob, quality } = await compressCanvasToJpg(canvas);
+                            const jpgDataUrl = URL.createObjectURL(jpgBlob);
+                            
+                            const jpgFilename = `${originalFileName}_page_${pageNum}.jpg`;
+                            allGeneratedFiles.push({ name: jpgFilename, blob: jpgBlob });
+                            
+                            displayImageOutput(jpgDataUrl, pageNum, jpgBlob.size, quality, jpgFilename);
+                        }
+                    } catch (error) {
+                        console.error(`Error processing ${file.name}:`, error);
+                        const errorMsg = document.createElement('p');
+                        errorMsg.className = 'col-span-full text-red-500';
+                        errorMsg.textContent = `Failed to process ${file.name}. Error: ${error.message}`;
+                        outputDiv.appendChild(errorMsg);
+                    }
+                }
+
+                if (allGeneratedFiles.length > 0) {
+                    showStatus(`Finished all conversions. ${allGeneratedFiles.length} image(s) created.`, 'success');
+                    downloadAllButton.classList.remove('hidden');
+                } else {
+                    showStatus('No images were generated from the selected files.', 'error');
+                }
+                clearButton.disabled = false;
+            }
+
+            async function downloadAllFilesAsZip() {
+                if (allGeneratedFiles.length === 0) {
+                    showStatus('No files to download.', 'error');
+                    return;
+                }
+                showLoadingSpinner('Creating ZIP file...');
+                const zip = new JSZip();
+                allGeneratedFiles.forEach(file => zip.file(file.name, file.blob));
+
+                try {
+                    const zipBlob = await zip.generateAsync({ type: 'blob' });
+                    const link = document.createElement('a');
+                    link.href = URL.createObjectURL(zipBlob);
+                    link.download = 'converted_images.zip';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    showStatus('ZIP file downloaded successfully!', 'success');
+                } catch (error) {
+                    console.error('Error creating ZIP file:', error);
+                    showStatus('Error creating ZIP file.', 'error');
+                }
+            }
+
+            function readFileAsArrayBuffer(file) {
+                return new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = () => resolve(reader.result);
+                    reader.onerror = () => reject(reader.error);
+                    reader.readAsArrayBuffer(file);
+                });
+            }
+            
+            async function renderPageToCanvas(page) {
+                const MAX_DIMENSION = 1024;
+                const viewportDefault = page.getViewport({ scale: 1 });
+                const scale = Math.min(MAX_DIMENSION / viewportDefault.width, MAX_DIMENSION / viewportDefault.height, 2);
+                const viewport = page.getViewport({ scale });
+                const canvas = document.createElement('canvas');
+                canvas.height = viewport.height;
+                canvas.width = viewport.width;
+                const context = canvas.getContext('2d');
+                await page.render({ canvasContext: context, viewport: viewport }).promise;
+                return canvas;
+            }
+
+            async function compressCanvasToJpg(canvas) {
+                const MAX_SIZE_BYTES = 512 * 1024;
+                let quality = 0.95;
+                let jpgBlob;
+                while (quality > 0.1) {
+                    const dataUrl = canvas.toDataURL('image/jpeg', quality);
+                    jpgBlob = await (await fetch(dataUrl)).blob();
+                    if (jpgBlob.size <= MAX_SIZE_BYTES) return { jpgBlob, quality: Math.round(quality * 100) };
+                    quality -= 0.05;
+                }
+                console.warn('Could not compress image under 512KB, even at lowest quality.');
+                return { jpgBlob, quality: 10 };
+            }
+
+            function displayImageOutput(dataUrl, pageNum, sizeBytes, quality, downloadName) {
+                const sizeKB = (sizeBytes / 1024).toFixed(2);
+                const card = document.createElement('div');
+                card.className = 'output-card bg-white rounded-lg shadow-md p-4 flex flex-col items-center text-center';
+                card.innerHTML = `
+                    <img src="${dataUrl}" alt="Page ${pageNum}" class="w-full h-auto rounded-md border border-gray-200 mb-4 object-contain" style="max-height: 300px;">
+                    <h3 class="font-bold text-lg text-gray-800">Page ${pageNum}</h3>
+                    <p class="text-sm text-gray-500 mb-4">
+                        Size: <span class="font-semibold text-green-600">${sizeKB} KB</span> | Quality: ${quality}%
+                    </p>
+                    <a href="${dataUrl}" download="${downloadName}" class="btn btn-secondary w-full text-white font-semibold py-2 px-4 rounded-lg flex items-center justify-center">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                        Download JPG
+                    </a>
+                `;
+                outputDiv.appendChild(card);
+            }
+
+            function showStatus(message, type = 'info') {
+                statusDiv.innerHTML = '';
+                const p = document.createElement('p');
+                p.textContent = message;
+                p.className = type === 'error' ? 'text-red-600 font-semibold' : (type === 'success' ? 'text-green-600 font-semibold' : 'text-blue-600');
+                statusDiv.appendChild(p);
+            }
+
+            function showLoadingSpinner(message) {
+                statusDiv.innerHTML = `
+                    <div class="flex items-center justify-center">
+                        <div class="spinner mr-3"></div>
+                        <p class="text-blue-600">${message}</p>
+                    </div>
+                `;
+            }
+
+            function resetUI() {
+                statusDiv.innerHTML = '';
+                outputDiv.innerHTML = '';
+                fileNameDisplay.textContent = '';
+                downloadAllButton.classList.add('hidden');
+                convertButton.disabled = true;
+                clearButton.disabled = true;
+                allGeneratedFiles = [];
+                pdfFileInput.value = '';
+            }
+        });
+    </script>
+</body>
+</html>
