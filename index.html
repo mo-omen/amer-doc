@@ -158,8 +158,8 @@
     </div>
 
     <!-- Output Section -->
-    <div id="output" class="w-full max-w-6xl mt-8 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-        <!-- Converted images will be appended here -->
+    <div id="output" class="w-full max-w-6xl mt-8 flex flex-col space-y-8">
+        <!-- Result sections will be appended here -->
     </div>
     
     <script>
@@ -174,7 +174,7 @@
             
             pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js`;
             
-            // State variables to hold the files
+            // State variables
             let allGeneratedFiles = [];
             let otherImageFiles = [];
 
@@ -202,7 +202,6 @@
                     return;
                 }
                 
-                // Reset state for a new conversion
                 resetOutput();
                 convertButton.disabled = true;
                 clearButton.disabled = true;
@@ -225,7 +224,6 @@
                             const filePromises = [];
                             
                             zip.forEach((relativePath, zipEntry) => {
-                                // Skip directories
                                 if (zipEntry.dir) return;
 
                                 const entryName = zipEntry.name;
@@ -248,17 +246,15 @@
 
                         } catch (error) {
                             console.error(`Error processing ZIP ${fileName}:`, error);
-                            displayErrorCard(`Failed to process ${fileName}. Is it a valid ZIP file?`);
+                            displayErrorCard(outputDiv, `Failed to process ${fileName}. Is it a valid ZIP file?`);
                         }
                     } else {
                         console.warn(`Skipping unsupported file type: ${fileName} (${fileType})`);
                     }
                 }
 
-                // After all files are processed, display the "other files" section if needed
                 displayOtherImageFiles();
                 
-                // Final status update
                 let statusMessage = '';
                 const convertedCount = allGeneratedFiles.length;
                 const otherCount = otherImageFiles.length;
@@ -279,7 +275,20 @@
             async function processPdfData(pdfData, fileName) {
                 const originalFileName = fileName.replace(/\.pdf$/i, '');
                 
-                displaySectionHeader(`Converted Pages from: ${fileName}`);
+                // Create a container section for this PDF's results
+                const resultSection = document.createElement('div');
+                resultSection.className = 'w-full';
+                
+                const header = document.createElement('h2');
+                header.className = 'text-xl font-bold text-gray-700 mb-4 border-b pb-2';
+                header.textContent = `Converted Pages from: ${fileName}`;
+                resultSection.appendChild(header);
+
+                const pagesGrid = document.createElement('div');
+                pagesGrid.className = 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6';
+                resultSection.appendChild(pagesGrid);
+
+                outputDiv.appendChild(resultSection);
 
                 try {
                     const pdf = await pdfjsLib.getDocument({ data: pdfData }).promise;
@@ -295,22 +304,34 @@
                         const jpgFilename = `${originalFileName}_page_${pageNum}.jpg`;
                         allGeneratedFiles.push({ name: jpgFilename, blob: jpgBlob });
                         
-                        displayConvertedImageCard(jpgDataUrl, pageNum, jpgBlob.size, quality, jpgFilename);
+                        displayConvertedImageCard(pagesGrid, jpgDataUrl, pageNum, jpgBlob.size, quality, jpgFilename);
                     }
                 } catch (error) {
                     console.error(`Error processing ${fileName}:`, error);
-                    displayErrorCard(`Failed to process ${fileName}. Error: ${error.message}`);
+                    displayErrorCard(resultSection, `Failed to process ${fileName}. Error: ${error.message}`);
                 }
             }
 
             function displayOtherImageFiles() {
                 if (otherImageFiles.length === 0) return;
 
-                displaySectionHeader('Other Image Files Found');
+                const otherFilesSection = document.createElement('div');
+                otherFilesSection.className = 'w-full';
+
+                const header = document.createElement('h2');
+                header.className = 'text-xl font-bold text-gray-700 mb-4 border-b pb-2';
+                header.textContent = 'Other Image Files Found';
+                otherFilesSection.appendChild(header);
+
+                const imagesGrid = document.createElement('div');
+                imagesGrid.className = 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6';
+                otherFilesSection.appendChild(imagesGrid);
+
+                outputDiv.appendChild(otherFilesSection);
 
                 otherImageFiles.forEach(file => {
                     const dataUrl = URL.createObjectURL(file.blob);
-                    displayOtherImageCard(dataUrl, file.name, file.blob.size);
+                    displayOtherImageCard(imagesGrid, dataUrl, file.name, file.blob.size);
                 });
             }
 
@@ -322,9 +343,7 @@
                 showLoadingSpinner('Creating ZIP file...');
                 const zip = new JSZip();
 
-                // Add converted JPGs
                 allGeneratedFiles.forEach(file => zip.file(file.name, file.blob));
-                // Add other images
                 otherImageFiles.forEach(file => zip.file(file.name, file.blob));
 
                 try {
@@ -341,8 +360,6 @@
                     showStatus('Error creating ZIP file.', 'error');
                 }
             }
-
-            // --- Canvas and Image Helper Functions ---
 
             function readFileAsArrayBuffer(file) {
                 return new Promise((resolve, reject) => {
@@ -380,16 +397,7 @@
                 return { jpgBlob, quality: 10 };
             }
 
-            // --- UI Rendering Functions ---
-
-            function displaySectionHeader(title) {
-                const header = document.createElement('h2');
-                header.className = 'col-span-full text-xl font-bold text-gray-700 mt-6 mb-1 border-b pb-2';
-                header.textContent = title;
-                outputDiv.appendChild(header);
-            }
-
-            function displayConvertedImageCard(dataUrl, pageNum, sizeBytes, quality, downloadName) {
+            function displayConvertedImageCard(parentElement, dataUrl, pageNum, sizeBytes, quality, downloadName) {
                 const sizeKB = (sizeBytes / 1024).toFixed(2);
                 const card = document.createElement('div');
                 card.className = 'output-card bg-white rounded-lg shadow-md p-4 flex flex-col items-center text-center';
@@ -404,10 +412,10 @@
                         Download JPG
                     </a>
                 `;
-                outputDiv.appendChild(card);
+                parentElement.appendChild(card);
             }
 
-            function displayOtherImageCard(dataUrl, fileName, sizeBytes) {
+            function displayOtherImageCard(parentElement, dataUrl, fileName, sizeBytes) {
                 const sizeKB = (sizeBytes / 1024).toFixed(2);
                 const card = document.createElement('div');
                 card.className = 'output-card bg-white rounded-lg shadow-md p-4 flex flex-col items-center text-center';
@@ -420,14 +428,14 @@
                         Download
                     </a>
                 `;
-                outputDiv.appendChild(card);
+                parentElement.appendChild(card);
             }
 
-             function displayErrorCard(message) {
+             function displayErrorCard(parentElement, message) {
                 const errorCard = document.createElement('div');
-                errorCard.className = 'col-span-full bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative';
+                errorCard.className = 'w-full bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative';
                 errorCard.textContent = message;
-                outputDiv.appendChild(errorCard);
+                parentElement.appendChild(errorCard);
             }
 
             function showStatus(message, type = 'info') {
