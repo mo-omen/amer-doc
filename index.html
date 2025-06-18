@@ -125,6 +125,20 @@
                 </div>
                 <p id="fileName" class="text-center text-sm text-gray-500 mt-2 h-5"></p>
             </div>
+            
+            <!-- Width Selector Section -->
+            <div>
+                <label for="widthSelector" class="block text-sm font-medium text-gray-700 mb-2">2. Select output width (pixels):</label>
+                <select id="widthSelector" class="w-full bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5">
+                    <option value="600">600px</option>
+                    <option value="700">700px</option>
+                    <option value="800">800px</option>
+                    <option value="900">900px</option>
+                    <option value="1000">1000px</option>
+                    <option value="1100">1100px</option>
+                    <option value="1200" selected>1200px</option>
+                </select>
+            </div>
 
             <!-- Action Buttons -->
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -166,6 +180,7 @@
         document.addEventListener('DOMContentLoaded', () => {
             const fileInput = document.getElementById('fileInput');
             const fileNameDisplay = document.getElementById('fileName');
+            const widthSelector = document.getElementById('widthSelector');
             const convertButton = document.getElementById('convertButton');
             const clearButton = document.getElementById('clearButton');
             const downloadAllButton = document.getElementById('downloadAllButton');
@@ -236,7 +251,15 @@
                                     filePromises.push(promise);
                                 } else if (/\.(jpe?g|png|gif|bmp|webp)$/i.test(lowerCaseName)) {
                                      const promise = zipEntry.async('blob').then(imageBlob => {
-                                        otherImageFiles.push({ name: entryName, blob: imageBlob });
+                                        // Sanitize the filename, preserving the extension
+                                        const lastDotIndex = entryName.lastIndexOf('.');
+                                        const namePart = lastDotIndex !== -1 ? entryName.substring(0, lastDotIndex) : entryName;
+                                        const extensionPart = lastDotIndex !== -1 ? entryName.substring(lastDotIndex) : '';
+                                        
+                                        const sanitizedNamePart = namePart.replace(/[^a-zA-Z0-9- ]/g, '');
+                                        const finalFileName = sanitizedNamePart + extensionPart;
+
+                                        otherImageFiles.push({ name: finalFileName, blob: imageBlob });
                                     });
                                     filePromises.push(promise);
                                 }
@@ -273,7 +296,8 @@
             }
             
             async function processPdfData(pdfData, fileName) {
-                const originalFileName = fileName.replace(/\.pdf$/i, '');
+                // Sanitize the base filename by removing the PDF extension and invalid characters
+                const originalFileName = fileName.replace(/\.pdf$/i, '').replace(/[^a-zA-Z0-9- ]/g, '');
                 
                 // Create a container section for this PDF's results
                 const resultSection = document.createElement('div');
@@ -371,9 +395,9 @@
             }
             
             async function renderPageToCanvas(page) {
-                const MAX_DIMENSION = 1024;
+                const TARGET_WIDTH = parseInt(widthSelector.value, 10);
                 const viewportDefault = page.getViewport({ scale: 1 });
-                const scale = Math.min(MAX_DIMENSION / viewportDefault.width, MAX_DIMENSION / viewportDefault.height, 2);
+                const scale = TARGET_WIDTH / viewportDefault.width; // Calculate scale based on the target width
                 const viewport = page.getViewport({ scale });
                 const canvas = document.createElement('canvas');
                 canvas.height = viewport.height;
@@ -385,16 +409,19 @@
 
             async function compressCanvasToJpg(canvas) {
                 const MAX_SIZE_BYTES = 512 * 1024;
-                let quality = 0.95;
+                let quality = 1.0; // Start at 100% quality
                 let jpgBlob;
+                // Iteratively reduce quality to meet the size constraint
                 while (quality > 0.1) {
                     const dataUrl = canvas.toDataURL('image/jpeg', quality);
                     jpgBlob = await (await fetch(dataUrl)).blob();
-                    if (jpgBlob.size <= MAX_SIZE_BYTES) return { jpgBlob, quality: Math.round(quality * 100) };
+                    if (jpgBlob.size <= MAX_SIZE_BYTES) {
+                        return { jpgBlob, quality: Math.round(quality * 100) };
+                    }
                     quality -= 0.05;
                 }
                 console.warn('Could not compress image under 512KB, even at lowest quality.');
-                return { jpgBlob, quality: 10 };
+                return { jpgBlob, quality: 10 }; // Return the smallest version if loop finishes
             }
 
             function displayConvertedImageCard(parentElement, dataUrl, pageNum, sizeBytes, quality, downloadName) {
