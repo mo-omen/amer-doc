@@ -157,7 +157,7 @@
             <div>
                 <label for="widthSelector" class="block text-sm font-medium text-gray-700 mb-2" data-lang-key="step2Label">2. Select output width (pixels):</label>
                 <select id="widthSelector" class="w-full bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5">
-                    <option value="600">600px</option><option value="700">700px</option><option value="800">800px</option><option value="900">900px</option><option value="1000">1000px</option><option value="1100">1100px</option><option value="1200" selected>1200px</option>
+                    <option value="600">600px</option><option value="700">700px</option><option value="800">800px</option><option value="900">900px</option><option value="1000">1000px</option><option value="1100">1100px</option><option value="1200" selected>1200px</option><option value="1300">1300px</option><option value="1400">1400px</option><option value="1500">1500px</option>
                 </select>
             </div>
 
@@ -203,7 +203,7 @@
                 <div><h3 class="font-bold" data-lang-key="step1Title">1. Select Files</h3><p data-lang-key="step1Desc">Click the 'Click to upload' button or drag and drop your files into the dashed box. You can select multiple PDF files, ZIP files, or a mix of both. The application will automatically find and process all PDF files inside any selected ZIP archives.</p></div>
                 <div><h3 class="font-bold" data-lang-key="step2Title">2. Choose Width</h3><p data-lang-key="step2Desc">Select the desired width for the output JPG images from the dropdown menu. The height will be adjusted automatically to maintain the aspect ratio. The image quality will be adjusted to keep the file size below 512 KB, as required by GDRFA.</p></div>
                 <div><h3 class="font-bold" data-lang-key="step3Title">3. Convert</h3><p data-lang-key="step3Desc">Click the 'Convert to JPG' button. The application will process each page of your PDF files and display them as individual JPG images. Any other images found in ZIP files will also be displayed.</p></div>
-                <div><h3 class="font-bold" data-lang-key="step4Title">4. Download</h3><p data-lang-key="step4Desc">You can download each image individually using the 'Download JPG' button on each card. Alternatively, click the 'Download All as ZIP' button at the top to save all the generated images in a single ZIP file.</p></div>
+                <div><h3 class="font-bold" data-lang-key="step4Title">4. Download</h3><p data-lang-key="step4Desc">You can download each image individually using the 'Download JPG' button on each card. For converted PDFs, you can download all its pages as a ZIP file using the button in the section header. Alternatively, click the 'Download All as ZIP' button at the top to save all the generated images in a single ZIP file.</p></div>
             </div>
         </div>
     </div>
@@ -256,7 +256,7 @@
                     step3Title: '3. Convert',
                     step3Desc: "Click the 'Convert to JPG' button. The application will process each page of your PDF files and display them as individual JPG images. Any other images found in ZIP files will also be displayed.",
                     step4Title: '4. Download',
-                    step4Desc: "You can download each image individually using the 'Download JPG' button on each card. Alternatively, click the 'Download All as ZIP' button at the top to save all the generated images in a single ZIP file.",
+                    step4Desc: "You can download each image individually using the 'Download JPG' button on each card. For converted PDFs, you can download all its pages as a ZIP file using the button in the section header. Alternatively, click the 'Download All as ZIP' button at the top to save all the generated images in a single ZIP file.",
                     filesSelected: 'file(s) selected',
                     processing: 'Starting processing for',
                     readingPDF: 'Reading PDF file:',
@@ -282,6 +282,7 @@
                     quality: 'Quality:',
                     downloadJPG: 'Download JPG',
                     download: 'Download',
+                    downloadFileZip: 'Download Pages as ZIP',
                     otherImagesTitle: 'Other Image Files Found',
                     convertedFrom: 'Converted Pages from:'
                 },
@@ -305,7 +306,7 @@
                     step3Title: '٣. التحويل',
                     step3Desc: "انقر على زر 'تحويل إلى JPG'. سيقوم التطبيق بمعالجة كل صفحة من ملفات PDF الخاصة بك وعرضها كصور JPG فردية. سيتم أيضًا عرض أي صور أخرى تم العثور عليها في ملفات ZIP.",
                     step4Title: '٤. التنزيل',
-                    step4Desc: "يمكنك تنزيل كل صورة على حدة باستخدام زر 'تنزيل JPG' الموجود على كل بطاقة. بدلاً من ذلك ، انقر فوق الزر 'تنزيل الكل كملف ZIP' في الأعلى لحفظ جميع الصور التي تم إنشاؤها في ملف ZIP واحد.",
+                    step4Desc: "يمكنك تنزيل كل صورة على حدة باستخدام زر 'تنزيل JPG' الموجود على كل بطاقة. بالنسبة لملفات PDF المحولة، يمكنك تنزيل جميع صفحاتها كملف ZIP باستخدام الزر الموجود في رأس القسم. بدلاً من ذلك ، انقر فوق الزر 'تنزيل الكل كملف ZIP' في الأعلى لحفظ جميع الصور التي تم إنشاؤها في ملف ZIP واحد.",
                     filesSelected: 'ملف (ملفات) محددة',
                     processing: 'بدء معالجة',
                     readingPDF: 'قراءة ملف PDF:',
@@ -331,6 +332,7 @@
                     quality: 'الجودة:',
                     downloadJPG: 'تنزيل JPG',
                     download: 'تنزيل',
+                    downloadFileZip: 'تنزيل الصفحات كـ ZIP',
                     otherImagesTitle: 'ملفات صور أخرى تم العثور عليها',
                     convertedFrom: 'صفحات محولة من:'
                 }
@@ -482,16 +484,25 @@
             
             async function processPdfData(pdfData, fileName) {
                 const originalFileName = fileName.replace(/\.pdf$/i, '').replace(/[^a-zA-Z0-9- ]/g, '');
+                const filesForThisPdf = [];
+
                 const resultSection = document.createElement('div');
                 resultSection.className = 'w-full';
+
+                const headerContainer = document.createElement('div');
+                headerContainer.className = 'flex justify-between items-center mb-4 border-b pb-2';
+
                 const header = document.createElement('h2');
-                header.className = 'text-xl font-bold text-gray-700 mb-4 border-b pb-2';
+                header.className = 'text-xl font-bold text-gray-700';
                 header.textContent = `${translations[currentLang].convertedFrom} ${fileName}`;
-                resultSection.appendChild(header);
+                headerContainer.appendChild(header);
+                resultSection.appendChild(headerContainer);
+
                 const pagesGrid = document.createElement('div');
                 pagesGrid.className = 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6';
                 resultSection.appendChild(pagesGrid);
                 outputDiv.appendChild(resultSection);
+
                 try {
                     const pdf = await pdfjsLib.getDocument({ data: pdfData }).promise;
                     const numPages = pdf.numPages;
@@ -502,9 +513,39 @@
                         const { jpgBlob, quality } = await compressCanvasToJpg(canvas);
                         const jpgDataUrl = URL.createObjectURL(jpgBlob);
                         const jpgFilename = `${originalFileName}_page_${pageNum}.jpg`;
+                        
                         allGeneratedFiles.push({ name: jpgFilename, blob: jpgBlob });
+                        filesForThisPdf.push({ name: jpgFilename, blob: jpgBlob });
+                        
                         displayConvertedImageCard(pagesGrid, jpgDataUrl, pageNum, jpgBlob.size, quality, jpgFilename);
                     }
+
+                    if (filesForThisPdf.length > 0) {
+                        const downloadFileZipButton = document.createElement('button');
+                        downloadFileZipButton.className = 'btn btn-secondary text-white font-semibold py-2 px-4 rounded-lg flex items-center justify-center text-sm';
+                        downloadFileZipButton.innerHTML = `<svg class="w-4 h-4 ltr:mr-2 rtl:ml-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg><span data-lang-key="downloadFileZip">${translations[currentLang].downloadFileZip}</span>`;
+                        
+                        downloadFileZipButton.onclick = async () => {
+                            showLoadingSpinner(translations[currentLang].creatingZIP);
+                            const zip = new JSZip();
+                            filesForThisPdf.forEach(file => zip.file(file.name, file.blob));
+                            try {
+                                const zipBlob = await zip.generateAsync({ type: 'blob' });
+                                const link = document.createElement('a');
+                                link.href = URL.createObjectURL(zipBlob);
+                                link.download = `${originalFileName}_pages.zip`;
+                                document.body.appendChild(link);
+                                link.click();
+                                document.body.removeChild(link);
+                                showStatus(translations[currentLang].zipSuccess, 'success');
+                            } catch (error) {
+                                console.error('Error creating ZIP file:', error);
+                                showStatus(translations[currentLang].zipCreationError, 'error');
+                            }
+                        };
+                        headerContainer.appendChild(downloadFileZipButton);
+                    }
+
                 } catch (error) {
                     console.error(`Error processing ${fileName}:`, error);
                     displayErrorCard(resultSection, `${translations[currentLang].pdfError} ${fileName}${translations[currentLang].pdfErrorDetail} ${error.message}`);
