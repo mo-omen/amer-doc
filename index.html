@@ -26,12 +26,13 @@
         .main-container {
              animation: fadeIn 0.8s ease-out;
         }
+        /* Softer glass effect for better clarity */
         .glass-effect {
-            background: rgba(255, 255, 255, 0.6);
-            backdrop-filter: blur(15px) saturate(150%);
-            -webkit-backdrop-filter: blur(15px) saturate(150%);
+            background: rgba(255, 255, 255, 0.75);
+            backdrop-filter: blur(10px) saturate(120%);
+            -webkit-backdrop-filter: blur(10px) saturate(120%);
             border-radius: 1rem;
-            border: 1px solid rgba(209, 213, 219, 0.3);
+            border: 1px solid rgba(209, 213, 219, 0.4);
             box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.1);
         }
         .btn {
@@ -46,6 +47,7 @@
         .btn-secondary { background: linear-gradient(135deg, #10b981 0%, #059669 100%); }
         .btn-zip { background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); }
         .btn-clear { background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%); }
+        .btn-danger { background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); }
         .spinner {
             border: 4px solid rgba(0, 0, 0, 0.1);
             width: 36px;
@@ -93,8 +95,8 @@
             height: 20px;
             fill: currentColor;
         }
-        #help-modal { transition: opacity 0.3s ease; }
-        #modal-content { transition: transform 0.3s ease; }
+        .modal { transition: opacity 0.3s ease; }
+        .modal-content { transition: transform 0.3s ease; }
         .modal-enter { opacity: 0; }
         .modal-leave-active { opacity: 0; }
         .modal-content-enter { transform: scale(0.95); }
@@ -195,16 +197,42 @@
     <div id="output" class="w-full max-w-6xl mt-8 flex flex-col space-y-8"></div>
 
     <!-- Help Modal -->
-    <div id="help-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center p-4 z-50">
-        <div id="modal-content" class="glass-effect p-6 max-w-2xl w-full relative">
+    <div id="help-modal" class="modal fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center p-4 z-50">
+        <div id="modal-content" class="modal-content glass-effect p-6 max-w-2xl w-full relative">
             <button id="close-modal-button" class="absolute top-3 text-2xl font-bold text-gray-500 hover:text-gray-800 ltr:right-3 rtl:left-3">&times;</button>
             <h2 class="text-2xl font-bold mb-4 text-gray-800" data-lang-key="howToUseTitle">How to Use</h2>
             <div class="space-y-4 text-gray-700 max-h-[70vh] overflow-y-auto ltr:pr-2 rtl:pl-2">
-                <div><h3 class="font-bold" data-lang-key="step1Title">1. Select Files</h3><p data-lang-key="step1Desc">Click the 'Click to upload' button or drag and drop your files into the dashed box. You can select multiple PDF files, ZIP files, or a mix of both. The application will automatically find and process all PDF files inside any selected ZIP archives.</p></div>
-                <div><h3 class="font-bold" data-lang-key="step2Title">2. Choose Width</h3><p data-lang-key="step2Desc">Select the desired width for the output JPG images from the dropdown menu. The height will be adjusted automatically to maintain the aspect ratio. The image quality will be adjusted to keep the file size below 512 KB, as required by GDRFA.</p></div>
-                <div><h3 class="font-bold" data-lang-key="step3Title">3. Convert</h3><p data-lang-key="step3Desc">Click the 'Convert to JPG' button. The application will process each page of your PDF files and display them as individual JPG images. Any other images found in ZIP files will also be displayed.</p></div>
-                <div><h3 class="font-bold" data-lang-key="step4Title">4. Download</h3><p data-lang-key="step4Desc">You can download each image individually using the 'Download JPG' button on each card. For converted PDFs, you can download all its pages as a ZIP file using the button in the section header. Alternatively, click the 'Download All as ZIP' button at the top to save all the generated images in a single ZIP file.</p></div>
+                <div><h3 class="font-bold" data-lang-key="step1Title">1. Upload Files</h3><p data-lang-key="step1Desc">Click or drag & drop files into the box. You can add multiple PDFs, ZIPs, or image files. The app automatically finds all supported files within ZIP archives.</p></div>
+                <div><h3 class="font-bold" data-lang-key="step2Title">2. Choose Width & Convert</h3><p data-lang-key="step2Desc">Select your desired JPG width from the dropdown, then click 'Convert to JPG'. The image height is set automatically to maintain aspect ratio.</p></div>
+                <div><h3 class="font-bold" data-lang-key="step3Title">3. Handle Locked PDFs</h3><p data-lang-key="step3Desc">If any PDFs are password-protected, a prompt will appear. Enter the required password(s) to continue the conversion.</p></div>
+                <div><h3 class="font-bold" data-lang-key="step4Title">4. Download Your Images</h3><p data-lang-key="step4Desc">Download images one by one, as a ZIP for each converted PDF, or get everything at once with the 'Download All as ZIP' button.</p></div>
             </div>
+        </div>
+    </div>
+    
+    <!-- Password Modal -->
+    <div id="password-modal" class="modal fixed inset-0 bg-black bg-opacity-60 hidden items-center justify-center p-4 z-[60]">
+        <div id="password-modal-content" class="modal-content glass-effect p-6 max-w-lg w-full relative">
+             <h2 class="text-2xl font-bold mb-4 text-gray-800" data-lang-key="passwordModalTitle">Password Required</h2>
+             <form id="password-form" class="space-y-4">
+                 <div id="password-fields-container" class="space-y-3 max-h-[40vh] overflow-y-auto ltr:pr-2 rtl:pl-2">
+                    <!-- Password fields will be dynamically inserted here -->
+                 </div>
+                 <div class="pt-2">
+                    <label class="flex items-center space-x-2">
+                        <input type="checkbox" id="use-same-password-checkbox" class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                        <span class="text-sm text-gray-700" data-lang-key="useSamePasswordLabel">Use one password for all files</span>
+                    </label>
+                 </div>
+                 <div id="single-password-container" class="hidden">
+                    <label class="block text-sm font-medium text-gray-700" data-lang-key="passwordAllLabel">Password for All Files</label>
+                    <input type="password" id="single-password-input" class="mt-1 w-full bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5">
+                 </div>
+                 <div class="flex justify-end gap-4 pt-4">
+                     <button type="button" id="cancel-password-button" class="btn btn-clear text-white font-semibold py-2 px-5 rounded-lg" data-lang-key="cancelBtn">Cancel</button>
+                     <button type="submit" class="btn btn-primary text-white font-semibold py-2 px-5 rounded-lg" data-lang-key="submitBtn">Submit</button>
+                 </div>
+             </form>
         </div>
     </div>
     
@@ -221,10 +249,20 @@
             const outputDiv = document.getElementById('output');
             const dropZone = document.querySelector('label.border-dashed');
             const langToggleButton = document.getElementById('lang-toggle');
+            
+            // Modal Elements
             const helpButton = document.getElementById('help-button');
             const helpModal = document.getElementById('help-modal');
-            const modalContent = document.getElementById('modal-content');
+            const helpModalContent = document.getElementById('modal-content');
             const closeModalButton = document.getElementById('close-modal-button');
+            const passwordModal = document.getElementById('password-modal');
+            const passwordModalContent = document.getElementById('password-modal-content');
+            const passwordForm = document.getElementById('password-form');
+            const passwordFieldsContainer = document.getElementById('password-fields-container');
+            const useSamePasswordCheckbox = document.getElementById('use-same-password-checkbox');
+            const singlePasswordContainer = document.getElementById('single-password-container');
+            const singlePasswordInput = document.getElementById('single-password-input');
+            const cancelPasswordButton = document.getElementById('cancel-password-button');
 
             // Set PDF.js worker source
             pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js`;
@@ -246,21 +284,24 @@
                     step2Label: '2. Select output width (pixels):',
                     convertBtn: 'Convert to JPG',
                     clearBtn: 'Clear',
+                    cancelBtn: 'Cancel',
+                    submitBtn: 'Submit',
                     downloadAllBtn: 'Download All as ZIP',
                     developedBy: 'Developed by',
                     howToUseTitle: 'How to Use',
-                    step1Title: '1. Select Files',
-                    step1Desc: "Click the 'Click to upload' button or drag and drop your files into the dashed box. You can select multiple PDF files, ZIP files, or a mix of both. The application will automatically find and process all PDF files inside any selected ZIP archives.",
-                    step2Title: '2. Choose Width',
-                    step2Desc: 'Select the desired width for the output JPG images from the dropdown menu. The height will be adjusted automatically to maintain the aspect ratio. The image quality will be adjusted to keep the file size below 512 KB, as required by GDRFA.',
-                    step3Title: '3. Convert',
-                    step3Desc: "Click the 'Convert to JPG' button. The application will process each page of your PDF files and display them as individual JPG images. Any other images found in ZIP files will also be displayed.",
-                    step4Title: '4. Download',
-                    step4Desc: "You can download each image individually using the 'Download JPG' button on each card. For converted PDFs, you can download all its pages as a ZIP file using the button in the section header. Alternatively, click the 'Download All as ZIP' button at the top to save all the generated images in a single ZIP file.",
+                    step1Title: '1. Upload Files',
+                    step1Desc: "Click or drag & drop files into the box. You can add multiple PDFs, ZIPs, or image files. The app automatically finds all supported files within ZIP archives.",
+                    step2Title: '2. Choose Width & Convert',
+                    step2Desc: "Select your desired JPG width from the dropdown, then click 'Convert to JPG'. The image height is set automatically to maintain aspect ratio.",
+                    step3Title: '3. Handle Locked PDFs',
+                    step3Desc: "If any PDFs are password-protected, a prompt will appear. Enter the required password(s) to continue the conversion.",
+                    step4Title: '4. Download Your Images',
+                    step4Desc: "Download images one by one, as a ZIP for each converted PDF, or get everything at once with the 'Download All as ZIP' button.",
                     filesSelected: 'file(s) selected',
                     processing: 'Starting processing for',
                     readingPDF: 'Reading PDF file:',
                     inspectingZIP: 'Inspecting ZIP file:',
+                    checkingPdfs: 'Checking for locked files...',
                     unsupportedFile: 'Skipping unsupported file type:',
                     processingComplete: 'Processing complete.',
                     pagesConverted: 'page(s) converted.',
@@ -271,6 +312,7 @@
                     zipErrorDetail: '. Is it a valid ZIP file?',
                     pdfError: 'Failed to process',
                     pdfErrorDetail: '. Error:',
+                    incorrectPasswordError: 'Incorrect password for',
                     creatingZIP: 'Creating ZIP file...',
                     zipSuccess: 'ZIP file downloaded successfully!',
                     zipCreationError: 'Error creating ZIP file.',
@@ -284,7 +326,11 @@
                     download: 'Download',
                     downloadFileZip: 'Download Pages as ZIP',
                     otherImagesTitle: 'Other Image Files Found',
-                    convertedFrom: 'Converted Pages from:'
+                    convertedFrom: 'Converted Pages from:',
+                    passwordModalTitle: 'Password Required',
+                    useSamePasswordLabel: 'Use one password for all files',
+                    passwordLabel: 'Password for',
+                    passwordAllLabel: 'Password for All Files'
                 },
                 ar: {
                     mainTitle: 'محول PDF إلى JPG',
@@ -296,21 +342,24 @@
                     step2Label: '٢. حدد عرض الصورة (بكسل):',
                     convertBtn: 'تحويل إلى JPG',
                     clearBtn: 'مسح',
+                    cancelBtn: 'إلغاء',
+                    submitBtn: 'إرسال',
                     downloadAllBtn: 'تنزيل الكل كملف ZIP',
                     developedBy: 'تم التطوير بواسطة',
                     howToUseTitle: 'كيفية الاستخدام',
-                    step1Title: '١. تحديد الملفات',
-                    step1Desc: "انقر على زر 'انقر للتحميل' أو قم بسحب وإفلات ملفاتك في المربع المتقطع. يمكنك تحديد عدة ملفات PDF أو ملفات ZIP أو مزيج من الاثنين. سيقوم التطبيق تلقائيًا بالعثور على جميع ملفات PDF ومعالجتها داخل أي أرشيف ZIP محدد.",
-                    step2Title: '٢. اختيار العرض',
-                    step2Desc: 'حدد العرض المطلوب لصور JPG الناتجة من القائمة المنسدلة. سيتم تعديل الارتفاع تلقائيًا للحفاظ على نسبة العرض إلى الارتفاع. سيتم تعديل جودة الصورة للحفاظ على حجم الملف أقل من 512 كيلوبايت، كما هو مطلوب من قبل GDRFA.',
-                    step3Title: '٣. التحويل',
-                    step3Desc: "انقر على زر 'تحويل إلى JPG'. سيقوم التطبيق بمعالجة كل صفحة من ملفات PDF الخاصة بك وعرضها كصور JPG فردية. سيتم أيضًا عرض أي صور أخرى تم العثور عليها في ملفات ZIP.",
-                    step4Title: '٤. التنزيل',
-                    step4Desc: "يمكنك تنزيل كل صورة على حدة باستخدام زر 'تنزيل JPG' الموجود على كل بطاقة. بالنسبة لملفات PDF المحولة، يمكنك تنزيل جميع صفحاتها كملف ZIP باستخدام الزر الموجود في رأس القسم. بدلاً من ذلك ، انقر فوق الزر 'تنزيل الكل كملف ZIP' في الأعلى لحفظ جميع الصور التي تم إنشاؤها في ملف ZIP واحد.",
+                    step1Title: '١. رفع الملفات',
+                    step1Desc: "انقر أو اسحب وأفلت الملفات في المربع. يمكنك إضافة عدة ملفات PDF أو ZIP أو ملفات صور. يجد التطبيق تلقائيًا جميع الملفات المدعومة داخل أرشيفات ZIP.",
+                    step2Title: '٢. اختر العرض والتحويل',
+                    step2Desc: "حدد عرض JPG الذي تريده من القائمة المنسدلة، ثم انقر فوق 'تحويل إلى JPG'. يتم ضبط ارتفاع الصورة تلقائيًا للحفاظ على نسبة العرض إلى الارتفاع.",
+                    step3Title: '٣. التعامل مع ملفات PDF المؤمنة',
+                    step3Desc: "إذا كانت أي من ملفات PDF محمية بكلمة مرور، فستظهر نافذة منبثقة. أدخل كلمة (كلمات) المرور المطلوبة لمتابعة التحويل.",
+                    step4Title: '٤. تنزيل صورك',
+                    step4Desc: "قم بتنزيل الصور واحدة تلو الأخرى، أو كملف ZIP لكل ملف PDF تم تحويله، أو احصل على كل شيء مرة واحدة باستخدام زر 'تنزيل الكل كملف ZIP'.",
                     filesSelected: 'ملف (ملفات) محددة',
                     processing: 'بدء معالجة',
                     readingPDF: 'قراءة ملف PDF:',
                     inspectingZIP: 'فحص ملف ZIP:',
+                    checkingPdfs: 'التحقق من الملفات المؤمنة...',
                     unsupportedFile: 'تجاوز نوع ملف غير مدعوم:',
                     processingComplete: 'اكتملت المعالجة.',
                     pagesConverted: 'صفحة (صفحات) تم تحويلها.',
@@ -321,6 +370,7 @@
                     zipErrorDetail: '. هل هو ملف ZIP صالح؟',
                     pdfError: 'فشل في معالجة',
                     pdfErrorDetail: '. خطأ:',
+                    incorrectPasswordError: 'كلمة مرور غير صحيحة لـ',
                     creatingZIP: 'جاري إنشاء ملف ZIP...',
                     zipSuccess: 'تم تنزيل ملف ZIP بنجاح!',
                     zipCreationError: 'خطأ في إنشاء ملف ZIP.',
@@ -334,7 +384,11 @@
                     download: 'تنزيل',
                     downloadFileZip: 'تنزيل الصفحات كـ ZIP',
                     otherImagesTitle: 'ملفات صور أخرى تم العثور عليها',
-                    convertedFrom: 'صفحات محولة من:'
+                    convertedFrom: 'صفحات محولة من:',
+                    passwordModalTitle: 'كلمة المرور مطلوبة',
+                    useSamePasswordLabel: 'استخدام كلمة مرور واحدة لجميع الملفات',
+                    passwordLabel: 'كلمة المرور لـ',
+                    passwordAllLabel: 'كلمة المرور لجميع الملفات'
                 }
             };
 
@@ -343,46 +397,42 @@
                 currentLang = lang;
                 document.documentElement.lang = lang;
                 document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
-
                 document.querySelectorAll('[data-lang-key]').forEach(el => {
                     const key = el.getAttribute('data-lang-key');
-                    if (translations[lang][key]) {
-                        el.textContent = translations[lang][key];
-                    }
+                    if (translations[lang][key]) { el.textContent = translations[lang][key]; }
                 });
-
                 langToggleButton.textContent = lang === 'en' ? 'العربية' : 'English';
             };
-
-            langToggleButton.addEventListener('click', () => {
-                const newLang = currentLang === 'en' ? 'ar' : 'en';
-                setLanguage(newLang);
-            });
+            langToggleButton.addEventListener('click', () => setLanguage(currentLang === 'en' ? 'ar' : 'en'));
 
             // --- Modal Functions ---
-            const showModal = () => {
-                helpModal.style.display = 'flex';
+            const showModal = (modal, content) => {
+                modal.style.display = 'flex';
                 setTimeout(() => {
-                    helpModal.classList.remove('modal-enter');
-                    modalContent.classList.remove('modal-content-enter');
+                    modal.classList.remove('modal-enter');
+                    content.classList.remove('modal-content-enter');
                 }, 10);
             };
-            const hideModal = () => {
-                helpModal.classList.add('modal-leave-active');
-                modalContent.classList.add('modal-content-leave-active');
+            const hideModal = (modal, content) => {
+                modal.classList.add('modal-leave-active');
+                content.classList.add('modal-content-leave-active');
                 setTimeout(() => {
-                    helpModal.style.display = 'none';
-                    helpModal.classList.remove('modal-leave-active');
-                    modalContent.classList.remove('modal-content-leave-active');
+                    modal.style.display = 'none';
+                    modal.classList.remove('modal-leave-active');
+                    content.classList.remove('modal-content-leave-active');
                 }, 300);
             };
 
-            helpButton.addEventListener('click', showModal);
-            closeModalButton.addEventListener('click', hideModal);
-            helpModal.addEventListener('click', (e) => {
-                if (e.target === helpModal) hideModal();
+            helpButton.addEventListener('click', () => showModal(helpModal, helpModalContent));
+            closeModalButton.addEventListener('click', () => hideModal(helpModal, helpModalContent));
+            helpModal.addEventListener('click', (e) => { if (e.target === helpModal) hideModal(helpModal, helpModalContent); });
+            cancelPasswordButton.addEventListener('click', () => {
+                hideModal(passwordModal, passwordModalContent);
+                clearButton.disabled = false;
+                convertButton.disabled = false;
+                showStatus('');
             });
-
+            
             // --- Drag and Drop ---
             let dragCounter = 0;
             document.body.addEventListener('dragover', (e) => { e.preventDefault(); e.stopPropagation(); });
@@ -394,9 +444,8 @@
                 e.stopPropagation();
                 dragCounter = 0;
                 dropZone.classList.remove('bg-blue-100', 'border-blue-400');
-                const droppedFiles = e.dataTransfer.files;
-                if (droppedFiles.length > 0) {
-                    fileInput.files = droppedFiles;
+                if (e.dataTransfer.files.length > 0) {
+                    fileInput.files = e.dataTransfer.files;
                     handleFileSelection();
                 }
             });
@@ -419,54 +468,125 @@
             }
             
             async function handleConversion() {
-                const files = fileInput.files;
-                if (files.length === 0) {
+                if (fileInput.files.length === 0) {
                     showStatus(translations[currentLang].selectFilesError, 'error');
                     return;
                 }
                 resetOutput();
                 convertButton.disabled = true;
                 clearButton.disabled = true;
-                showLoadingSpinner(`${translations[currentLang].processing} ${files.length} ${translations[currentLang].filesSelected}...`);
-                for (const file of files) {
+                showLoadingSpinner(translations[currentLang].checkingPdfs);
+
+                const fileQueue = [];
+                const localOtherImageFiles = [];
+
+                for (const file of fileInput.files) {
                     const fileType = file.type;
                     const fileName = file.name;
                     if (fileType === 'application/pdf') {
-                        showLoadingSpinner(`${translations[currentLang].readingPDF} ${fileName}`);
-                        const pdfData = await readFileAsArrayBuffer(file);
-                        await processPdfData(pdfData, fileName);
+                        fileQueue.push({ file: file, name: fileName, type: 'pdf' });
                     } else if (fileType === 'application/zip' || fileType === 'application/x-zip-compressed' || fileName.toLowerCase().endsWith('.zip')) {
-                        showLoadingSpinner(`${translations[currentLang].inspectingZIP} ${fileName}`);
                         try {
                             const zip = await JSZip.loadAsync(file);
-                            const filePromises = [];
-                            zip.forEach((relativePath, zipEntry) => {
-                                if (zipEntry.dir) return;
+                            for (const [relativePath, zipEntry] of Object.entries(zip.files)) {
+                                if (zipEntry.dir) continue;
                                 const entryName = zipEntry.name;
                                 const lowerCaseName = entryName.toLowerCase();
                                 if (lowerCaseName.endsWith('.pdf')) {
-                                    filePromises.push(zipEntry.async('arraybuffer').then(pdfData => processPdfData(pdfData, entryName)));
+                                    const data = await zipEntry.async('arraybuffer');
+                                    fileQueue.push({ data, name: entryName, type: 'pdf' });
                                 } else if (/\.(jpe?g|png|gif|bmp|webp)$/i.test(lowerCaseName)) {
-                                     filePromises.push(zipEntry.async('blob').then(imageBlob => {
-                                        const lastDotIndex = entryName.lastIndexOf('.');
-                                        const namePart = lastDotIndex !== -1 ? entryName.substring(0, lastDotIndex) : entryName;
-                                        const extensionPart = lastDotIndex !== -1 ? entryName.substring(lastDotIndex) : '';
-                                        const sanitizedNamePart = namePart.replace(/[^a-zA-Z0-9- ]/g, '');
-                                        const finalFileName = sanitizedNamePart + extensionPart;
-                                        otherImageFiles.push({ name: finalFileName, blob: imageBlob });
-                                    }));
+                                     const blob = await zipEntry.async('blob');
+                                     const sanitizedName = entryName.replace(/[^a-zA-Z0-9-._ ]/g, '');
+                                     localOtherImageFiles.push({ name: sanitizedName, blob: blob });
                                 }
-                            });
-                            await Promise.all(filePromises);
+                            }
                         } catch (error) {
                             console.error(`Error processing ZIP ${fileName}:`, error);
                             displayErrorCard(outputDiv, `${translations[currentLang].zipError} ${fileName}${translations[currentLang].zipErrorDetail}`);
                         }
+                    } else if (file.type.startsWith('image/')) {
+                        localOtherImageFiles.push({ name: file.name, blob: file });
                     } else {
-                        console.warn(`${translations[currentLang].unsupportedFile} ${fileName} (${fileType})`);
+                         console.warn(`${translations[currentLang].unsupportedFile} ${fileName} (${fileType})`);
                     }
                 }
+                
+                otherImageFiles = [...localOtherImageFiles]; // Store for later display
+                const lockedPdfs = [];
+                const unlockedPdfs = [];
+
+                for (const item of fileQueue) {
+                    const data = item.data || await readFileAsArrayBuffer(item.file);
+                    try {
+                        await pdfjsLib.getDocument({ data }).promise;
+                        unlockedPdfs.push({ ...item, data });
+                    } catch (error) {
+                        if (error.name === 'PasswordException') {
+                            lockedPdfs.push({ ...item, data });
+                        } else {
+                            displayErrorCard(outputDiv, `${translations[currentLang].pdfError} ${item.name}${translations[currentLang].pdfErrorDetail} ${error.message}`);
+                        }
+                    }
+                }
+                
+                if (lockedPdfs.length > 0) {
+                    promptForPasswords(lockedPdfs, unlockedPdfs);
+                } else {
+                    await startProcessing([...unlockedPdfs]);
+                }
+            }
+
+            function promptForPasswords(lockedPdfs, unlockedPdfs) {
+                passwordFieldsContainer.innerHTML = ''; // Clear previous fields
+                lockedPdfs.forEach((pdf, index) => {
+                    const fieldId = `password-${index}`;
+                    const fieldHtml = `
+                        <div>
+                            <label for="${fieldId}" class="block text-sm font-medium text-gray-700">${translations[currentLang].passwordLabel} <span class="font-semibold">${pdf.name}</span></label>
+                            <input type="password" id="${fieldId}" data-filename="${pdf.name}" class="mt-1 individual-password w-full bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5">
+                        </div>
+                    `;
+                    passwordFieldsContainer.insertAdjacentHTML('beforeend', fieldHtml);
+                });
+                
+                // Reset checkbox and visibility
+                useSamePasswordCheckbox.checked = false;
+                singlePasswordContainer.classList.add('hidden');
+                passwordFieldsContainer.classList.remove('hidden');
+
+                showModal(passwordModal, passwordModalContent);
+                
+                passwordForm.onsubmit = async (e) => {
+                    e.preventDefault();
+                    const useSame = useSamePasswordCheckbox.checked;
+                    const singlePassword = singlePasswordInput.value;
+                    const individualPasswords = Array.from(document.querySelectorAll('.individual-password')).map(input => input.value);
+
+                    lockedPdfs.forEach((pdf, index) => {
+                        pdf.password = useSame ? singlePassword : individualPasswords[index];
+                    });
+                    
+                    hideModal(passwordModal, passwordModalContent);
+                    await startProcessing([...unlockedPdfs, ...lockedPdfs]);
+                };
+            }
+            
+            useSamePasswordCheckbox.addEventListener('change', (e) => {
+                 const isChecked = e.target.checked;
+                 singlePasswordContainer.classList.toggle('hidden', !isChecked);
+                 passwordFieldsContainer.classList.toggle('hidden', isChecked);
+            });
+
+
+            async function startProcessing(filesToProcess) {
+                showLoadingSpinner(`${translations[currentLang].processing} ${filesToProcess.length} PDF(s)...`);
+                for (const pdf of filesToProcess) {
+                     await processPdfData(pdf.data, pdf.name, pdf.password);
+                }
+                
                 displayOtherImageFiles();
+                
                 let statusMessage = '';
                 const convertedCount = allGeneratedFiles.length;
                 const otherCount = otherImageFiles.length;
@@ -477,37 +597,38 @@
                     showStatus(statusMessage, 'success');
                     downloadAllButton.classList.remove('hidden');
                 } else {
-                    showStatus(translations[currentLang].noFilesConverted, 'error');
+                    showStatus(translations[currentLang].noFilesConverted, 'warning');
                 }
                 clearButton.disabled = false;
             }
-            
-            async function processPdfData(pdfData, fileName) {
+
+            async function processPdfData(pdfData, fileName, password = null) {
                 const originalFileName = fileName.replace(/\.pdf$/i, '').replace(/[^a-zA-Z0-9- ]/g, '');
                 const filesForThisPdf = [];
 
-                const resultSection = document.createElement('div');
-                resultSection.className = 'w-full';
-
+                let resultSection = document.querySelector(`[data-filename="${fileName}"]`);
+                if (!resultSection) {
+                    resultSection = document.createElement('div');
+                    resultSection.className = 'w-full';
+                    resultSection.dataset.filename = fileName;
+                    outputDiv.appendChild(resultSection);
+                }
+                 
                 const headerContainer = document.createElement('div');
                 headerContainer.className = 'flex justify-between items-center mb-4 border-b pb-2';
-
                 const header = document.createElement('h2');
                 header.className = 'text-xl font-bold text-gray-700';
                 header.textContent = `${translations[currentLang].convertedFrom} ${fileName}`;
                 headerContainer.appendChild(header);
                 resultSection.appendChild(headerContainer);
-
                 const pagesGrid = document.createElement('div');
                 pagesGrid.className = 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6';
                 resultSection.appendChild(pagesGrid);
-                outputDiv.appendChild(resultSection);
 
                 try {
-                    const pdf = await pdfjsLib.getDocument({ data: pdfData }).promise;
-                    const numPages = pdf.numPages;
-                    for (let pageNum = 1; pageNum <= numPages; pageNum++) {
-                        showLoadingSpinner(`${translations[currentLang].convertingPage} ${pageNum} ${translations[currentLang].of} ${numPages} ${translations[currentLang].for} ${fileName}...`);
+                    const pdf = await pdfjsLib.getDocument({ data: pdfData, password: password }).promise;
+                    for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+                        showLoadingSpinner(`${translations[currentLang].convertingPage} ${pageNum} ${translations[currentLang].of} ${pdf.numPages} ${translations[currentLang].for} ${fileName}...`);
                         const page = await pdf.getPage(pageNum);
                         const canvas = await renderPageToCanvas(page);
                         const { jpgBlob, quality } = await compressCanvasToJpg(canvas);
@@ -545,10 +666,17 @@
                         };
                         headerContainer.appendChild(downloadFileZipButton);
                     }
-
                 } catch (error) {
                     console.error(`Error processing ${fileName}:`, error);
-                    displayErrorCard(resultSection, `${translations[currentLang].pdfError} ${fileName}${translations[currentLang].pdfErrorDetail} ${error.message}`);
+                    let errorMessage;
+                    if (error.name === 'PasswordException') {
+                        errorMessage = `${translations[currentLang].incorrectPasswordError} ${fileName}.`;
+                    } else {
+                        errorMessage = `${translations[currentLang].pdfError} ${fileName}${translations[currentLang].pdfErrorDetail} ${error.message}`;
+                    }
+                    headerContainer.remove();
+                    pagesGrid.remove();
+                    displayErrorCard(resultSection, errorMessage, 'btn-danger');
                 }
             }
 
@@ -579,7 +707,7 @@
                     const zipBlob = await zip.generateAsync({ type: 'blob' });
                     const link = document.createElement('a');
                     link.href = URL.createObjectURL(zipBlob);
-                    link.download = 'converted_and_other_images.zip';
+                    link.download = 'converted_images.zip';
                     document.body.appendChild(link);
                     link.click();
                     document.body.removeChild(link);
@@ -646,8 +774,8 @@
                 parentElement.appendChild(card);
             }
 
-            function displayErrorCard(parentElement, message) { const errorCard = document.createElement('div'); errorCard.className = 'w-full bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative'; errorCard.textContent = message; parentElement.appendChild(errorCard); }
-            function showStatus(message, type = 'info') { statusDiv.innerHTML = ''; const p = document.createElement('p'); p.textContent = message; p.className = type === 'error' ? 'text-red-600 font-semibold' : (type === 'success' ? 'text-green-600 font-semibold' : 'text-blue-600'); statusDiv.appendChild(p); }
+            function displayErrorCard(parentElement, message, colorClass = 'bg-red-100 border-red-400 text-red-700') { const errorCard = document.createElement('div'); errorCard.className = `w-full ${colorClass} px-4 py-3 rounded relative`; errorCard.textContent = message; parentElement.appendChild(errorCard); }
+            function showStatus(message, type = 'info') { statusDiv.innerHTML = ''; const p = document.createElement('p'); p.textContent = message; const colorMap = {'error': 'text-red-600', 'success': 'text-green-600', 'warning': 'text-yellow-600', 'info': 'text-blue-600'}; p.className = `${colorMap[type] || 'text-blue-600'} font-semibold`; statusDiv.appendChild(p); }
             function showLoadingSpinner(message) { statusDiv.innerHTML = `<div class="flex items-center justify-center"><div class="spinner ltr:mr-3 rtl:ml-3"></div><p class="text-blue-600">${message}</p></div>`; }
             function resetOutput() { outputDiv.innerHTML = ''; downloadAllButton.classList.add('hidden'); allGeneratedFiles = []; otherImageFiles = []; }
             function resetUI() { statusDiv.innerHTML = ''; fileNameDisplay.textContent = ''; convertButton.disabled = true; clearButton.disabled = true; fileInput.value = ''; resetOutput(); }
